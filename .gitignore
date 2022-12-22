@@ -1,0 +1,7 @@
+.venv
+.idea
+.mypy_cache
+./data
+
+# Ignore dynaconf secret files
+.secrets.yaml

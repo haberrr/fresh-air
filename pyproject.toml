@@ -1,0 +1,49 @@
+[tool.poetry]
+name = "turbiner"
+version = "0.1.0"
+description = ""
+authors = ["Andrey Pavlov <pavlov.andrey@pm.me>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.10"
+scikit-learn = "^1.2.0"
+requests = "^2.28.1"
+tqdm = "^4.64.1"
+prefect = "^2.7.1"
+dynaconf = "^3.1.11"
+google-cloud-bigquery = {version = "^3.4.1", extras = ["gcp"]}
+
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^0.991"
+
+
+[tool.poetry.group.research]
+optional = true
+
+[tool.poetry.group.research.dependencies]
+ipykernel = "^6.19.2"
+ipywidgets = "^7.6.5"
+pandas = "^1.5.2"
+matplotlib = "^3.6.2"
+folium = "^0.14.0"
+
+
+[tool.mypy]
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

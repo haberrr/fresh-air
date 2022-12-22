@@ -1,0 +1,9 @@
+storage:
+  use_storage: local
+  local:
+    base_dir: ~/.turbiner/data/
+  bigquery:
+    project_id: turbiner
+
+credentials:
+  etl_service_account_json: ~/.turbiner/etl_runner.json
