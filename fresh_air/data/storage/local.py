@@ -1,11 +1,12 @@
 import os
-import json
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+
+import prefect.task_runners
 
 from fresh_air.data.storage.base import Resource
 from fresh_air.config import settings
 from fresh_air._logging import get_logger
+from fresh_air.data.storage.file import BaseFile, file_class_factory
 
 logger = get_logger(__name__)
 
@@ -20,6 +21,7 @@ class LocalResource(Resource):
 
     BASE_DIR: str = settings['storage.local.base_dir']
     DEFAULT_PROJ_DIR: str = '_default'
+    FILE_CLASS: BaseFile = file_class_factory()
 
     def __init__(
             self,
@@ -47,31 +49,27 @@ class LocalResource(Resource):
         self.data = data
         self.schema = schema
 
-    @property
-    def _full_path(self) -> str:
-        """Construct full path to the file."""
-        return os.path.expanduser(os.path.join(
-            self._dir_path,
-            f'{self.path[-1]}.jsonl'
-        ))
+        self._file = self.FILE_CLASS(self._dir_path, self.path[-1], schema=self.schema)
 
     @property
     def _dir_path(self) -> str:
         """Construct path to the directory with a file."""
         return os.path.expanduser(os.path.join(self.BASE_DIR, self.project_id, *self.path[:-1]))
 
-    def _ensure_path_exists(self) -> None:
-        if not os.path.exists(self._dir_path):
-            logger.info('Storage folder does not exist, creating...')
-            os.makedirs(self._dir_path)
-
-    def write(self, data: Optional[List[Dict[str, Any]]] = None, append: bool = True, **kwargs) -> None:
+    def write(
+            self,
+            data: Optional[List[Dict[str, Any]]] = None,
+            append: bool = True,
+            task_runner: Optional[prefect.task_runners.BaseTaskRunner] = None,
+            **kwargs,
+    ) -> None:
         """
         Write resource data to the file.
 
         Args:
             data: Data to write to the file. When provided replaces the data from the constructor.
             append: Whether to append or overwrite data.
+            task_runner: Task runner for the current flow run. Used to acquire lock on the file being written.
             **kwargs: Added for compatibility, ignored.
         """
         if data is not None:
@@ -80,16 +78,8 @@ class LocalResource(Resource):
         if self.data is None:
             raise ValueError('No data provided. Please provide data upon initialization or write call.')
 
-        self._ensure_path_exists()
-        logger.info('Saving to "%s"', self._full_path)
-
-        with open(self._full_path, ('a' if append else 'w') + 't') as f:
-            for item in self.data:
-                line = json.dumps({
-                    '_etl_timestamp': datetime.now().timestamp(),
-                    'data': item,
-                })
-                f.write(f'{line}\n')
+        logger.info('Saving %s', self.path)
+        self._file.write(self.data, append=append, task_runner=task_runner)
 
     def read(self, **kwargs) -> List[Dict[str, Any]]:
         """Read resource data from file.
@@ -97,14 +87,7 @@ class LocalResource(Resource):
         Args:
             **kwargs: Added for compatibility, ignored.
         """
-        logger.info('Reading from "%s"', self._full_path)
+        logger.info('Reading %s', self.path)
 
-        data = []
-        with open(self._full_path, 'rt') as f:
-            for line in f:
-                data.append(
-                    json.loads(line).get('data'),
-                )
-
-        self.data = data
+        self.data = list(self._file.read())
         return self.data

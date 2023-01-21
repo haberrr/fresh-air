@@ -1,0 +1,151 @@
+from datetime import datetime
+
+from fresh_air.data.storage import resource_class_factory
+from fresh_air.data.storage.base import SchemaField
+from fresh_air.data.flows.eea_aqd._utils import _url_parse
+
+storage_class = resource_class_factory()
+
+_columns_config = [
+    dict(
+        name='Countrycode',
+        field=SchemaField(
+            name='country_code',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='AirQualityStation',
+        field=SchemaField(
+            name='air_quality_station',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='AirQualityStationEoICode',
+        field=SchemaField(
+            name='air_quality_station_code',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='AirQualityStationNatCode',
+        field=SchemaField(
+            name='aiq_quality_station_nat_code',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='AirPollutantCode',
+        field=SchemaField(
+            name='air_pollutant_code',
+            field_type=int,
+        ),
+        preprocess=_url_parse(-1),
+        convert=True,
+    ),
+    dict(
+        name='ObservationDateBegin',
+        field=SchemaField(
+            name='observation_begin',
+            field_type=datetime,
+        ),
+    ),
+    dict(
+        name='ObservationDateEnd',
+        field=SchemaField(
+            name='observation_end',
+            field_type=datetime,
+        ),
+    ),
+    dict(
+        name='Projection',
+        field=SchemaField(
+            name='projection',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='Longitude',
+        field=SchemaField(
+            name='longitude',
+            field_type=float,
+        ),
+    ),
+    dict(
+        name='Latitude',
+        field=SchemaField(
+            name='latitude',
+            field_type=float,
+        ),
+    ),
+    dict(
+        name='Altitude',
+        field=SchemaField(
+            name='altitude',
+            field_type=float,
+        ),
+    ),
+    dict(
+        name='MeasurementType',
+        field=SchemaField(
+            name='measurement_type',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='AirQualityStationType',
+        field=SchemaField(
+            name='air_quality_station_type',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='AirQualityStationArea',
+        field=SchemaField(
+            name='Air_quality_station_area',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='EquivalenceDemonstrated',
+        field=SchemaField(
+            name='equivalence_demonstrated',
+            field_type=str,
+        ),
+    ),
+    dict(
+        name='MeasurementEquipment',
+        field=SchemaField(
+            name='measurement_equipment',
+            field_type=str,
+        ),
+        preprocess=_url_parse(-1),
+    ),
+    dict(
+        name='InletHeight',
+        field=SchemaField(
+            name='inlet_height',
+            field_type=float,
+        ),
+    ),
+    dict(
+        name='BuildingDistance',
+        field=SchemaField(
+            name='building_distance',
+            field_type=float,
+        ),
+    ),
+    dict(
+        name='KerbDistance',
+        field=SchemaField(
+            name='kerb_distance',
+            field_type=float,
+        ),
+    ),
+]
+
+table = storage_class(
+    path=('eea_aqd', 'metadata'),
+    schema=[col['field'] for col in _columns_config],
+)
