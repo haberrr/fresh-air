@@ -3,9 +3,9 @@ from typing import List, Optional, Dict, Any, Literal
 
 import prefect
 
-from turbiner.data.flows.openaq.measurements.table import measurements_table
-from turbiner.data.flows.tasks import query_bigquery, write_to_bigquery
-from turbiner.data.connections.openaq import OpenAQ
+from fresh_air.data.flows.openaq.measurements.table import measurements_table
+from fresh_air.data.flows.tasks import query_bigquery, write_to_bigquery
+from fresh_air.data.connections.openaq import OpenAQ
 
 _VIABLE_LOCATIONS_QUERY = '''
 SELECT id

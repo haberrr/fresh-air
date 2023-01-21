@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 from tqdm.auto import tqdm
 
-from turbiner._logging import get_logger
+from fresh_air._logging import get_logger
 
 APIResponseItem = Dict[str, Any]
 APIResponse = List[APIResponseItem]

@@ -1,8 +1,8 @@
-from turbiner.data.storage.base import SchemaField
-from turbiner.data.storage.bigquery import BigQueryTable
+from fresh_air.data.storage.base import SchemaField
+from fresh_air.data.storage.bigquery import BigQueryTable
 
 measurements_table = BigQueryTable(
-    path=(None, 'openaq', 'measurements'),
+    path=('openaq', 'measurements'),
     schema=[
         SchemaField(
             name='id',

@@ -3,9 +3,9 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from turbiner.data.storage.base import Resource
-from turbiner.config import settings
-from turbiner._logging import get_logger
+from fresh_air.data.storage.base import Resource
+from fresh_air.config import settings
+from fresh_air._logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -19,36 +19,46 @@ class LocalResource(Resource):
     """
 
     BASE_DIR: str = settings['storage.local.base_dir']
+    DEFAULT_PROJ_DIR: str = '_default'
 
     def __init__(
             self,
             path: Tuple[str, ...] | str,
+            project_id: Optional[str] = None,
             data: Optional[List[Dict[str, Any]]] = None,
             schema: Optional[Any] = None,
+            **kwargs,
     ):
         """
         Instantiate resource object.
 
         Args:
-            path: Unique identification path for the resource. When tuple of strings should represent location in
-                the hierarchical directory structure with the last item in tuple serving as a name of the object.
-                When string should represent the same location, with '.' separating leves of the hierarchy.
+            path: Unique identification path for the resource (under the `project_id` directory). When tuple of strings
+                should represent location in the hierarchical directory structure with the last item in tuple serving
+                as a name of the object. When string should represent the same location, with '.' separating leves of
+                the hierarchy.
+            project_id: (Optional) root directory of the path hierarchy.
             data: Optional data, to be written into the resource location as defined by `path`.
             schema: Ignored.
         """
         self.path = path if isinstance(path, tuple) else tuple(path.split('.'))
+        self.project_id = project_id or self.DEFAULT_PROJ_DIR
+
         self.data = data
         self.schema = schema
 
     @property
     def _full_path(self) -> str:
         """Construct full path to the file."""
-        return os.path.expanduser(os.path.join(self.BASE_DIR, *self.path[:-1], f'{self.path[-1]}.jsonl'))
+        return os.path.expanduser(os.path.join(
+            self._dir_path,
+            f'{self.path[-1]}.jsonl'
+        ))
 
     @property
     def _dir_path(self) -> str:
         """Construct path to the directory with a file."""
-        return os.path.expanduser(os.path.join(self.BASE_DIR, *self.path[:-1]))
+        return os.path.expanduser(os.path.join(self.BASE_DIR, self.project_id, *self.path[:-1]))
 
     def _ensure_path_exists(self) -> None:
         if not os.path.exists(self._dir_path):
@@ -75,11 +85,11 @@ class LocalResource(Resource):
 
         with open(self._full_path, ('a' if append else 'w') + 't') as f:
             for item in self.data:
-                json.dump({
+                line = json.dumps({
                     '_etl_timestamp': datetime.now().timestamp(),
                     'data': item,
-                }, f)
-                f.write('\n')
+                })
+                f.write(f'{line}\n')
 
     def read(self, **kwargs) -> List[Dict[str, Any]]:
         """Read resource data from file.

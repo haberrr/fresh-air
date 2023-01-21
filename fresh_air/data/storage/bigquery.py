@@ -5,8 +5,8 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from google.cloud import bigquery
 
-from turbiner.data.storage.base import Resource, SchemaField
-from turbiner.config import settings
+from fresh_air.data.storage.base import Resource, SchemaField
+from fresh_air.config import settings
 
 
 @cache
@@ -37,10 +37,12 @@ class BigQueryTable(Resource):
 
     def __init__(
             self,
-            path: Tuple[Optional[str], str, str] | str,
+            path: Tuple[str, str] | str,
             schema: List[SchemaField],
+            project_id: Optional[str] = None,
             data: Optional[List[Dict[str, Any]]] = None,
             clustering_fields: Optional[List[str]] = None,
+            **kwargs,
     ):
         """
         Instantiate resource object.
@@ -50,20 +52,15 @@ class BigQueryTable(Resource):
                 the form (project_id, dataset_id, table_name). When string, should represent the same location,
                 with '.' separating leves of the hierarchy.
             data: Optional data, to be written into the resource location as defined by `path`.
-            schema: Table schema of the form:
-                    ```[
-                        {'name': field_name_1, 'type': field_type_1, ...},
-                        {'name': field_name_2, 'type': field_type_2, ...},
-                        ...
-                    ]```,
-                Field type should be one of the supported BigQuery types.
+            schema: Table schema as a list of SchemaField objects. Field type should be one of the supported
+                BigQuery types.
+            project_id: BigQuery project ID to save data to.
         """
         if isinstance(path, str):
             path = tuple(path.split('.'))
 
-        self.project_id, self.dataset_id, self.table_id = path
-        if self.project_id is None:
-            self.project_id = settings.get('storage.bigquery.project_id')
+        self.dataset_id, self.table_id = path
+        self.project_id = project_id or settings.get('storage.bigquery.project_id')
 
         self.schema = schema
         self.data = data
@@ -117,10 +114,17 @@ class BigQueryTable(Resource):
     def _table(self) -> bigquery.Table:
         schema = []
         for field in self.schema:
+            if isinstance(field.field_type, type):
+                field_type = BIGQUERY_TYPE.get(field.field_type.__name__, 'STRING')
+            elif isinstance(field.field_type, str):
+                field_type = BIGQUERY_TYPE.get(field.field_type, 'STRING')
+            else:
+                raise TypeError(f'Unknown type ({type(field.field_type)}) for `field_type` of {field}')
+
             schema.append(
                 bigquery.SchemaField(
                     name=field.name,
-                    field_type=BIGQUERY_TYPE.get(field.field_type, 'STRING'),
+                    field_type=field_type,
                     description=field.description,
                     mode=field.mode,
                 )
@@ -135,7 +139,7 @@ class BigQueryTable(Resource):
         )
 
         table = bigquery.Table(
-            f'{self.project_id}.{self.dataset_id}.{self.table_id}',
+            f'{self.project_id}.{self.dataset_id}.{self.table_id}',  # noqa
             schema=schema,
         )
         table.clustering_fields = self.clustering_fields

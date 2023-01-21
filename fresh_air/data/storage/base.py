@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Optional, Dict, Any, Tuple, List, Union
 from dataclasses import dataclass
 
 
 @dataclass
 class SchemaField:
     name: str
-    field_type: str
+    field_type: Union[str, type]
     default: Optional[Any] = None
     description: Optional[str] = None
     mode: Optional[str] = None
@@ -21,6 +21,7 @@ class Resource(ABC):
     def __init__(
             self,
             path: Tuple[str, ...] | str,
+            project_id: Optional[str] = None,
             data: Optional[List[Dict[str, Any]]] = None,
             schema: Optional[List[SchemaField]] = None,
             **kwargs,

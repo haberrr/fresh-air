@@ -1,12 +1,12 @@
 import prefect
 
-from turbiner.data.connections.openaq import OpenAQ
-from turbiner.data.flows.tasks import write_to_bigquery
-from turbiner.data.storage.bigquery import BigQueryTable
-from turbiner.data.storage.base import SchemaField
+from fresh_air.data.connections.openaq import OpenAQ
+from fresh_air.data.flows.tasks import write_to_bigquery
+from fresh_air.data.storage.bigquery import BigQueryTable
+from fresh_air.data.storage.base import SchemaField
 
 locations_table = BigQueryTable(
-    path=(None, 'openaq', 'locations'),
+    path=('openaq', 'locations'),
     schema=[
         SchemaField(
             name='id',
