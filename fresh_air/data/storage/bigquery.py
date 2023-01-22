@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from functools import cache
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 
 from google.cloud import bigquery
 
@@ -42,6 +42,8 @@ class BigQueryTable(Resource):
             project_id: Optional[str] = None,
             data: Optional[List[Dict[str, Any]]] = None,
             clustering_fields: Optional[List[str]] = None,
+            partition_field: Optional[str] = None,
+            partition_scale: Optional[Union[bigquery.TimePartitioningType, str]] = None,
             **kwargs,
     ):
         """
@@ -55,6 +57,8 @@ class BigQueryTable(Resource):
             schema: Table schema as a list of SchemaField objects. Field type should be one of the supported
                 BigQuery types.
             project_id: BigQuery project ID to save data to.
+            partition_field: Field to use for table partitioning (must be of time TIMESTAMP, DATE or DATETIME).
+            partition_scale: Time scale to use when partitioning a table (hour, day, month or year).
         """
         if isinstance(path, str):
             path = tuple(path.split('.'))
@@ -65,6 +69,15 @@ class BigQueryTable(Resource):
         self.schema = schema
         self.data = data
         self.clustering_fields = clustering_fields
+
+        if (partition_scale is None) ^ (partition_field is None):
+            raise ValueError('Either both `partition_scale` and `partition_field` should be defined or none.')
+
+        if isinstance(partition_scale, str):
+            partition_scale = getattr(bigquery.TimePartitioningType, partition_scale.upper())
+
+        self.partition_field = partition_field
+        self.partition_scale = partition_scale
 
     def write(
             self,
@@ -143,8 +156,19 @@ class BigQueryTable(Resource):
             schema=schema,
         )
         table.clustering_fields = self.clustering_fields
+
+        if self.partition_field is not None:
+            table.time_partitioning = bigquery.TimePartitioning(
+                type_=self.partition_scale,
+                field=self.partition_field,  # noqa
+            )
+
         return table
 
     def _ensure_table_exists(self) -> None:
         bq_client = get_client()
+        bq_client.create_dataset(
+            bigquery.Dataset.from_string(f'{self.project_id}.{self.dataset_id}'),
+            exists_ok=True,
+        )
         bq_client.create_table(self._table, exists_ok=True)
