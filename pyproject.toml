@@ -20,6 +20,7 @@ bokeh = ">=2.4,<3.0"
 avro = "^1.11.1"
 fastavro = "^1.7.0"
 python-snappy = "^0.6.1"
+pandas = "^1.5.2"
 
 
 [tool.poetry.group.dev]
@@ -35,7 +36,6 @@ optional = true
 [tool.poetry.group.research.dependencies]
 ipykernel = "^6.19.2"
 ipywidgets = "^7.6.5"
-pandas = "^1.5.2"
 matplotlib = "^3.6.2"
 folium = "^0.14.0"
 
