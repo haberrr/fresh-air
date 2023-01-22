@@ -2,8 +2,6 @@ from collections import namedtuple
 
 import typer
 from prefect.deployments import Deployment
-from prefect.infrastructure.docker import DockerContainer
-from prefect.filesystems import LocalFileSystem
 from prefect.filesystems import GitHub
 from prefect_gcp.cloud_run import CloudRunJob
 
@@ -28,8 +26,7 @@ def deploy():
                 'batch_size': 20,
             },
             storage=GitHub.load('repo'),
-            # infrastructure=CloudRunJob.load("cloudrun"),
-            infrastructure=DockerContainer.load('docker-fresh-air'),
+            infrastructure=CloudRunJob.load("cloudrun"),
         )
 
         deployment.apply()  # noqa
