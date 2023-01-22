@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fresh_air.data.storage import resource_class_factory
 from fresh_air.data.storage.base import SchemaField
 from fresh_air.data.flows.eea_aqd._utils import _url_parse
@@ -13,6 +11,14 @@ _columns_config = [
             name='country_code',
             field_type=str,
         ),
+    ),
+    dict(
+        name='Timezone',
+        field=SchemaField(
+            name='timezone',
+            field_type=str,
+        ),
+        preprocess=_url_parse(-1),
     ),
     dict(
         name='AirQualityStation',
@@ -47,15 +53,15 @@ _columns_config = [
     dict(
         name='ObservationDateBegin',
         field=SchemaField(
-            name='observation_begin',
-            field_type=datetime,
+            name='observation_begin_ts',
+            field_type='timestamp',
         ),
     ),
     dict(
         name='ObservationDateEnd',
         field=SchemaField(
-            name='observation_end',
-            field_type=datetime,
+            name='observation_end_ts',
+            field_type='timestamp',
         ),
     ),
     dict(
