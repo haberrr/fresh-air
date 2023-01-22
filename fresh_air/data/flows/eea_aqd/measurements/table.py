@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fresh_air.data.flows.eea_aqd._utils import _url_parse
 from fresh_air.data.storage import resource_class_factory
 from fresh_air.data.storage.base import SchemaField
@@ -68,15 +66,15 @@ _columns_config = [
     dict(
         name='DatetimeBegin',
         field=SchemaField(
-            name='begin_dttm',
-            field_type=datetime,
+            name='begin_ts',
+            field_type='timestamp',
         ),
     ),
     dict(
         name='DatetimeEnd',
         field=SchemaField(
-            name='end_dttm',
-            field_type=datetime,
+            name='end_ts',
+            field_type='timestamp',
         ),
     ),
     dict(
@@ -98,4 +96,6 @@ _columns_config = [
 table = storage_class(
     path=('eea_aqd', 'measurements'),
     schema=[col['field'] for col in _columns_config],
+    partition_field='begin_ts',
+    partition_scale='MONTH',
 )
