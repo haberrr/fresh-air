@@ -1,5 +1,5 @@
 storage:
-  use_storage: bigquery
+  use_storage: local
   local:
     base_dir: ~/.fresh_air/data/
     format: avro
@@ -7,4 +7,4 @@ storage:
     project_id: turbiner
 
 credentials:
-  etl_service_account_json:
+  etl_service_account_json: ~/.fresh_air/etl_runner.json

@@ -261,21 +261,6 @@ tests = ["attrs[tests-no-zope]", "zope.interface"]
 tests-no-zope = ["cloudpickle", "cloudpickle", "hypothesis", "hypothesis", "mypy (>=0.971,<0.990)", "mypy (>=0.971,<0.990)", "pympler", "pympler", "pytest (>=4.3.0)", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-mypy-plugins", "pytest-xdist[psutil]", "pytest-xdist[psutil]"]
 
 [[package]]
-name = "avro"
-version = "1.11.1"
-description = "Avro is a serialization and RPC framework."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "avro-1.11.1.tar.gz", hash = "sha256:f123623ecc648d0e20ce14f8ed85162140c13cc4b108865d1b2529fbfa06c008"},
-]
-
-[package.extras]
-snappy = ["python-snappy"]
-zstandard = ["zstandard"]
-
-[[package]]
 name = "backcall"
 version = "0.2.0"
 description = "Specifications for callback functions passed in to an API"
@@ -330,7 +315,7 @@ dev = ["Sphinx (==4.3.2)", "black (==22.3.0)", "build (==0.8.0)", "flake8 (==4.0
 name = "bokeh"
 version = "2.4.3"
 description = "Interactive plots and applications in the browser from Python"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -795,7 +780,7 @@ files = [
 name = "dask"
 version = "2023.1.0"
 description = "Parallel PyData with Task Scheduling"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -899,7 +884,7 @@ files = [
 name = "distributed"
 version = "2023.1.0"
 description = "Distributed scheduler for Dask"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1021,7 +1006,7 @@ test = ["anyio[trio] (>=3.2.1,<4.0.0)", "black (==22.10.0)", "coverage[toml] (>=
 name = "fastavro"
 version = "1.7.0"
 description = "Fast read/write of AVRO files"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1195,6 +1180,25 @@ grpcgcp = ["grpcio-gcp (>=0.2.2,<1.0dev)"]
 grpcio-gcp = ["grpcio-gcp (>=0.2.2,<1.0dev)"]
 
 [[package]]
+name = "google-api-python-client"
+version = "2.73.0"
+description = "Google API Client Library for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "google-api-python-client-2.73.0.tar.gz", hash = "sha256:7e860e3ec27b504fb797fa23c07c012a874dd736491fddbe50a20d3bdde8ace6"},
+    {file = "google_api_python_client-2.73.0-py2.py3-none-any.whl", hash = "sha256:bafce2a02b06ee501df039eba5874afc7d28c9cf5ef92253327776448706556d"},
+]
+
+[package.dependencies]
+google-api-core = ">=1.31.5,<2.0.0 || >2.3.0,<3.0.0dev"
+google-auth = ">=1.19.0,<3.0.0dev"
+google-auth-httplib2 = ">=0.1.0"
+httplib2 = ">=0.15.0,<1dev"
+uritemplate = ">=3.0.1,<5"
+
+[[package]]
 name = "google-auth"
 version = "2.16.0"
 description = "Google Authentication Library"
@@ -1218,6 +1222,23 @@ enterprise-cert = ["cryptography (==36.0.2)", "pyopenssl (==22.0.0)"]
 pyopenssl = ["cryptography (>=38.0.3)", "pyopenssl (>=20.0.0)"]
 reauth = ["pyu2f (>=0.1.5)"]
 requests = ["requests (>=2.20.0,<3.0.0dev)"]
+
+[[package]]
+name = "google-auth-httplib2"
+version = "0.1.0"
+description = "Google Authentication Library: httplib2 transport"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "google-auth-httplib2-0.1.0.tar.gz", hash = "sha256:a07c39fd632becacd3f07718dfd6021bf396978f03ad3ce4321d060015cc30ac"},
+    {file = "google_auth_httplib2-0.1.0-py2.py3-none-any.whl", hash = "sha256:31e49c36c6b5643b57e82617cb3e021e3e1d2df9da63af67252c02fa9c1f4a10"},
+]
+
+[package.dependencies]
+google-auth = "*"
+httplib2 = ">=0.15.0"
+six = "*"
 
 [[package]]
 name = "google-cloud-bigquery"
@@ -1588,7 +1609,7 @@ hyperframe = ">=6.0,<7"
 name = "heapdict"
 version = "1.0.1"
 description = "a heap with decrease-key and increase-key operations"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -1629,6 +1650,21 @@ sniffio = ">=1.0.0,<2.0.0"
 [package.extras]
 http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (>=1.0.0,<2.0.0)"]
+
+[[package]]
+name = "httplib2"
+version = "0.21.0"
+description = "A comprehensive HTTP client library."
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+files = [
+    {file = "httplib2-0.21.0-py3-none-any.whl", hash = "sha256:987c8bb3eb82d3fa60c68699510a692aa2ad9c4bd4f123e51dfb1488c14cdd01"},
+    {file = "httplib2-0.21.0.tar.gz", hash = "sha256:fc144f091c7286b82bec71bdbd9b27323ba709cc612568d3000893bfd9cb4b34"},
+]
+
+[package.dependencies]
+pyparsing = {version = ">=2.4.2,<3.0.0 || >3.0.0,<3.0.1 || >3.0.1,<3.0.2 || >3.0.2,<3.0.3 || >3.0.3,<4", markers = "python_version > \"3.0\""}
 
 [[package]]
 name = "httpx"
@@ -2166,7 +2202,7 @@ adal = ["adal (>=1.0.2)"]
 name = "locket"
 version = "1.0.0"
 description = "File-based locks for Python on Linux and Windows"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 files = [
@@ -2352,7 +2388,7 @@ files = [
 name = "msgpack"
 version = "1.0.4"
 description = "MessagePack serializer"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -2785,7 +2821,7 @@ pyparsing = ">=2.0.2,<3.0.5 || >3.0.5"
 name = "pandas"
 version = "1.5.2"
 description = "Powerful data structures for data analysis, time series, and statistics"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -2861,7 +2897,7 @@ testing = ["docopt", "pytest (<6.0.0)"]
 name = "partd"
 version = "1.3.0"
 description = "Appendable key-value storage"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2954,7 +2990,7 @@ files = [
 name = "pillow"
 version = "9.4.0"
 description = "Python Imaging Library (Fork)"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -3107,7 +3143,7 @@ dev = ["autoflake8", "cairosvg", "flake8", "flaky", "ipython", "jinja2", "mkdocs
 name = "prefect-dask"
 version = "0.2.2"
 description = "Prefect integrations with the Dask execution framework."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -3121,6 +3157,30 @@ prefect = ">=2.6.0"
 
 [package.extras]
 dev = ["black", "coverage", "flake8", "flaky", "interrogate", "isort", "mkdocs", "mkdocs-gen-files", "mkdocs-material", "mkdocstrings[python]", "mock", "mypy", "pillow", "pre-commit", "pytest", "pytest-asyncio"]
+
+[[package]]
+name = "prefect-gcp"
+version = "0.2.4"
+description = "Prefect tasks and subflows for interacting with Google Cloud Platform."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "prefect-gcp-0.2.4.tar.gz", hash = "sha256:1d5989c17d58e88f45793404694c27810d2b7806d46593c894504e9765c41999"},
+    {file = "prefect_gcp-0.2.4-py3-none-any.whl", hash = "sha256:7b28174a3a750e5d777b32f85ed74a3bd24d529566de9ff69d4d92432e46049d"},
+]
+
+[package.dependencies]
+google-api-python-client = ">=2.20.0"
+prefect = ">=2.7.2"
+
+[package.extras]
+aiplatform = ["google-cloud-aiplatform"]
+all-extras = ["google-cloud-aiplatform", "google-cloud-bigquery", "google-cloud-secret-manager", "google-cloud-storage"]
+bigquery = ["google-cloud-bigquery"]
+cloud-storage = ["google-cloud-storage"]
+dev = ["black", "coverage", "flake8", "google-cloud-aiplatform", "google-cloud-bigquery", "google-cloud-secret-manager", "google-cloud-storage", "interrogate", "isort", "mkdocs", "mkdocs-gen-files", "mkdocs-material", "mkdocstrings-python-legacy", "mock", "mypy", "pillow", "pre-commit", "pytest", "pytest-asyncio"]
+secret-manager = ["google-cloud-secret-manager"]
 
 [[package]]
 name = "prometheus-client"
@@ -3198,7 +3258,7 @@ files = [
 name = "psutil"
 version = "5.9.4"
 description = "Cross-platform lib for process and system monitoring in Python."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 files = [
@@ -4118,7 +4178,7 @@ files = [
 name = "sortedcontainers"
 version = "2.4.0"
 description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -4255,7 +4315,7 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart", "pyyam
 name = "tblib"
 version = "1.7.0"
 description = "Traceback serialization library."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
@@ -4355,7 +4415,7 @@ files = [
 name = "toolz"
 version = "0.12.0"
 description = "List processing tools and functional utilities"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -4367,7 +4427,7 @@ files = [
 name = "tornado"
 version = "6.2"
 description = "Tornado is a Python web framework and asynchronous networking library, originally developed at FriendFeed."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">= 3.7"
 files = [
@@ -4505,6 +4565,18 @@ files = [
 dev = ["flake8 (<4.0.0)", "flake8-annotations", "flake8-bugbear", "flake8-commas", "flake8-comprehensions", "flake8-continuation", "flake8-datetimez", "flake8-docstrings", "flake8-import-order", "flake8-literal", "flake8-noqa", "flake8-requirements", "flake8-type-annotations", "flake8-use-fstring", "mypy", "pep8-naming"]
 
 [[package]]
+name = "uritemplate"
+version = "4.1.1"
+description = "Implementation of RFC 6570 URI Templates"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "uritemplate-4.1.1-py2.py3-none-any.whl", hash = "sha256:830c08b8d99bdd312ea4ead05994a38e8936266f84b9a7878232db50b044e02e"},
+    {file = "uritemplate-4.1.1.tar.gz", hash = "sha256:4346edfc5c3b79f694bccd6d6099a322bbeb628dbf2cd86eea55a456ce5124f0"},
+]
+
+[[package]]
 name = "urllib3"
 version = "1.26.14"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -4612,7 +4684,7 @@ notebook = ">=4.4.1"
 name = "zict"
 version = "2.2.0"
 description = "Mutable mapping tools"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -4626,4 +4698,4 @@ heapdict = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7e27e76f6887bc35fa43aab0a29c242c03beb25edf6cd6a0a59871f6e69b6204"
+content-hash = "6d2f68e02ba96b325d67d98cd406c09394c01b47ed919ec929531f2fe7971fdd"

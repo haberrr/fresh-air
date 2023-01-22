@@ -1,4 +1,4 @@
-from fresh_air.data.flows.eea_aqd._utils import _url_parse
+from fresh_air.data.flows.eea_aqd._utils import _url_parse, _to_timestamp
 from fresh_air.data.storage import resource_class_factory
 from fresh_air.data.storage.base import SchemaField
 
@@ -69,6 +69,7 @@ _columns_config = [
             name='begin_ts',
             field_type='timestamp',
         ),
+        preprocess=_to_timestamp,
     ),
     dict(
         name='DatetimeEnd',
@@ -76,6 +77,7 @@ _columns_config = [
             name='end_ts',
             field_type='timestamp',
         ),
+        preprocess=_to_timestamp,
     ),
     dict(
         name='Validity',

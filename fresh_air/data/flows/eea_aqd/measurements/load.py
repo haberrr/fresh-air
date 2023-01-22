@@ -3,7 +3,9 @@ from typing import Any, Dict, List, Optional, Iterable, Generator
 from datetime import date
 
 import prefect
+from prefect.task_runners import BaseTaskRunner
 from prefect_dask.task_runners import DaskTaskRunner
+import dask
 import typer
 import requests
 import pandas as pd
@@ -11,6 +13,7 @@ import pandas as pd
 from fresh_air._logging import get_logger
 from fresh_air.data.flows.eea_aqd.measurements.table import table, _columns_config
 from fresh_air.data.flows.tasks import write_data
+from fresh_air.data.storage import Resource
 
 
 class TimeCoverage(str, Enum):
@@ -108,7 +111,12 @@ def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]
     retry_delay_seconds=15,
     timeout_seconds=180,
 )
-def get_eea_aqd_measurement_report_batch_data(report_urls: List[str]) -> List[Dict[str, Any]]:
+def get_eea_aqd_measurement_report_batch_data(
+        report_urls: List[str],
+        table_: Resource,
+        append: bool = True,
+        task_runner: Optional[BaseTaskRunner] = None,
+) -> None:
     logger = get_logger(__name__)
 
     reports = []
@@ -117,7 +125,12 @@ def get_eea_aqd_measurement_report_batch_data(report_urls: List[str]) -> List[Di
         logger.info('Report %s/%s downloaded', i + 1, len(report_urls))
 
     logger.info('Total record count for %s reports: %s', len(report_urls), len(reports))
-    return reports
+    write_data.fn(
+        reports,
+        table_,
+        append,
+        task_runner,
+    )
 
 
 @prefect.flow(
@@ -125,7 +138,6 @@ def get_eea_aqd_measurement_report_batch_data(report_urls: List[str]) -> List[Di
     task_runner=DaskTaskRunner(cluster_kwargs={
         'n_workers': 2,
         'threads_per_worker': 2,
-        'memory_limit': '1GiB',
     }),
 )
 def load_eeq_aqd_measurements(
@@ -155,13 +167,14 @@ def load_eeq_aqd_measurements(
         time_coverage
     ).result()
 
-    for batch in _chunked(report_urls, batch_size):
-        write_data.submit(
-            download_reports.submit(batch),
-            table,
-            append=True,
-            task_runner=flow_context.task_runner,
-        )
+    with dask.config.set({'distributed.nanny.environ.MALLOC_TRIM_THRESHOLD_': 0}):
+        for batch in _chunked(report_urls, batch_size):
+            download_reports.submit(
+                batch,
+                table,
+                append=True,
+                task_runner=flow_context.task_runner,
+            )
 
 
 if __name__ == '__main__':
