@@ -29,7 +29,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SERVICE_ACCOUNT_CREDENTIALS }}'
-          token_format: access-token
+          token_format: access_token
       - name: Login to Artifact Registry
         uses: docker/login-action@v1
         with:
