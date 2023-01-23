@@ -114,11 +114,14 @@ def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]
     report = pd.read_csv(
         report_url
     )[[
-        col['name'] for col in _columns_config
-    ]].assign(**{
-        col['name']: col['preprocess'](col['name']) for col in _columns_config if 'preprocess' in col
-    }).rename(columns={
-        col['name']: col['field'].name for col in _columns_config
+        col['name'] for col in _columns_config if 'name' in col
+    ]].assign(
+        **{
+            col['name']: col['preprocess'](col['name']) for col in _columns_config if 'preprocess' in col
+        },
+        _report_url=report_url,
+    ).rename(columns={
+        col['name']: col['field'].name for col in _columns_config if 'name' in col
     }).astype({
         col['field'].name: col['field'].field_type for col in _columns_config if col.get('convert', False)
     }).replace({

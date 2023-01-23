@@ -120,6 +120,7 @@ class BigQueryTable(Resource):
             job_config=bigquery.LoadJobConfig(
                 schema=self._table.schema,
                 write_disposition=write_disposition,
+                schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
             )
         )
         job.result()

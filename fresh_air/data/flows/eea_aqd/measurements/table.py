@@ -93,6 +93,12 @@ _columns_config = [
             field_type=int,
         ),
     ),
+    dict(
+        field=SchemaField(
+            name='_report_url',
+            field_type=str,
+        ),
+    ),
 ]
 
 table = storage_class(
