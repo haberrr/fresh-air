@@ -183,6 +183,7 @@ def get_eea_aqd_measurement_report_batch_data(
     task_runner=DaskTaskRunner(cluster_kwargs={
         'n_workers': 2,
         'threads_per_worker': 4,
+        'memory_limit': 0.4,
     }),
 )
 def load_eeq_aqd_measurements(
