@@ -22,6 +22,6 @@ jobs:
       id: project_version
       run: echo "VERSION=$(poetry version --short);" >> $GITHUB_OUTPUT
     - name: Print project version
-      run: echo $DOCKER_ETL__IMAGE_NAME:${{ steps.project_version.outputs.VERSION }}
+      run: echo ${{ vars.DOCKER_ETL__IMAGE_NAME }}:${{ steps.project_version.outputs.VERSION }}
 #     - name: Build the Docker image
 #       run: docker build . --file Dockerfile --tag $DOCKER_ETL__IMAGE_NAME:${{ steps.project_version.outputs.VERSION }}
