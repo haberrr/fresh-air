@@ -5,19 +5,25 @@ from typing import List, Dict, Any, Optional, Tuple, Union
 
 from google.cloud import bigquery
 
+from fresh_air._logging import get_logger
 from fresh_air.data.storage.base import Resource, SchemaField
 from fresh_air.config import settings
+
+
+logger = get_logger()
 
 
 @cache
 def get_client():
     """Provides single BigQuery client."""
     credentials_json = settings.get('credentials.etl_service_account_json')
-    if credentials_json is not None:
+    if credentials_json is not None and os.path.exists(credentials_json):
+        logger.debug('Using provided service account credentials for BigQuery client')
         return bigquery.Client.from_service_account_json(
             os.path.expanduser(credentials_json)
         )
     else:
+        logger.debug('Using ADC for BigQuery client')
         return bigquery.Client()
 
 
