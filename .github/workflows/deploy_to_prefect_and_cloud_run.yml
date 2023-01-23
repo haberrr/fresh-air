@@ -20,9 +20,10 @@ jobs:
         id: project_version
         run: echo "VERSION=$(poetry version --short);" >> $GITHUB_OUTPUT
       - name: Build the Docker image
-        run: docker build . \
-              --file Dockerfile \
-              --tag ${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ vars.GCP_ARTIFACT_REGISTRY_REPOSITORY }}:${{ steps.project_version.outputs.VERSION }}
+        run: |
+          docker build . \
+          --file Dockerfile \
+          --tag ${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ vars.GCP_ARTIFACT_REGISTRY_REPOSITORY }}:${{ steps.project_version.outputs.VERSION }}
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v1
