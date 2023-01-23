@@ -5,7 +5,6 @@ from datetime import date
 import prefect
 from prefect.task_runners import BaseTaskRunner
 from prefect_dask.task_runners import DaskTaskRunner
-import dask
 import typer
 import requests
 import pandas as pd
@@ -46,6 +45,21 @@ def get_eea_aqd_measurement_report_urls(
         station: Optional[str] = None,
         time_coverage: TimeCoverage = 'Last7days',
 ) -> List[str]:
+    """
+    Request report URLs containing measurements information from EEA AQD database.
+
+    Args:
+        country_code: Two character country code of the air quality station to retrieve measurements from.
+        pollutant_code: Code of the pollutant.
+            Vocabulary with the possible values for the codes: https://dd.eionet.europa.eu/vocabulary/aq/pollutant/view.
+        year_from: Request data starting from this year.
+        year_to: Request data up to this year inclusive.
+        station: Station code to request data from.
+        time_coverage: Whether to request data from the past 7 days of for the whole year.
+
+    Returns:
+        List of report URLs filtered by the args.
+    """
     logger = get_logger(__name__)
     logger.info('Requesting report URL list...')
 
@@ -81,6 +95,19 @@ def get_eea_aqd_measurement_report_urls(
     retry_delay_seconds=15,
 )
 def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]:
+    """
+    Download and preprocess report data.
+
+    This function will select a subset of the columns and perform basic preprocessing for a part of them (like
+    extracting pollutant code from the URL to the vocabulary or converting datetime string to float timestamp).
+
+    Args:
+        report_url: URL to download report from. Normally this should be one of the URLs output
+            by the `get_eea_aqd_measurement_report_urls()`.
+
+    Returns:
+        Preprocessed report data.
+    """
     logger = get_logger(__name__)
     logger.info('Downloading report from URL: %s', report_url)
 
@@ -117,6 +144,21 @@ def get_eea_aqd_measurement_report_batch_data(
         append: bool = True,
         task_runner: Optional[BaseTaskRunner] = None,
 ) -> None:
+    """
+    Download a batch of reports from given `report_urls` and write them to a `table_`.
+
+    Notes:
+        This task performs two jobs: downloading and preprocessing data, and saving data to a table. This is a forced
+        measure due to the memory leak in when using Dask task runner to run tasks that return report data. Structuring
+        tasks this way avoids this issue.
+
+    Args:
+        report_urls: List of report URLs for the batch.
+        table_: Resource used to store reports' data.
+        append: Whether to append or to overwrite existing data.
+        task_runner: Optional task runner used to run this task. In case of the LocalResource storage it is used to
+            create Lock on the file to avoid writing to a file simultaneously from different workers/threads.
+    """
     logger = get_logger(__name__)
 
     reports = []
@@ -137,7 +179,7 @@ def get_eea_aqd_measurement_report_batch_data(
     name='Load EEA AQD measurements',
     task_runner=DaskTaskRunner(cluster_kwargs={
         'n_workers': 2,
-        'threads_per_worker': 2,
+        'threads_per_worker': 4,
     }),
 )
 def load_eeq_aqd_measurements(
@@ -149,6 +191,19 @@ def load_eeq_aqd_measurements(
         time_coverage: TimeCoverage = 'Last7days',
         batch_size: int = 10,
 ) -> None:
+    """
+    Retrieve report URLs, download, preprocess and save reports.
+
+    Args:
+        country_code: Two character country code of the air quality station to retrieve measurements from.
+        pollutant_code: Code of the pollutant.
+            Vocabulary with the possible values for the codes: https://dd.eionet.europa.eu/vocabulary/aq/pollutant/view.
+        year_from: Request data starting from this year.
+        year_to: Request data up to this year inclusive.
+        station: Station code to request data from.
+        time_coverage: Whether to request data from the past 7 days of for the whole year.
+        batch_size: Size of the report URLs batch to assign to a single Dask worker/thread.
+    """
     flow_context = prefect.context.get_run_context()
 
     if time_coverage == TimeCoverage.Year:
@@ -167,14 +222,13 @@ def load_eeq_aqd_measurements(
         time_coverage
     ).result()
 
-    with dask.config.set({'distributed.nanny.environ.MALLOC_TRIM_THRESHOLD_': 0}):
-        for batch in _chunked(report_urls, batch_size):
-            download_reports.submit(
-                batch,
-                table,
-                append=True,
-                task_runner=flow_context.task_runner,
-            )
+    for batch in _chunked(report_urls, batch_size):
+        download_reports.submit(
+            batch,
+            table,
+            append=True,
+            task_runner=flow_context.task_runner,
+        )
 
 
 if __name__ == '__main__':
