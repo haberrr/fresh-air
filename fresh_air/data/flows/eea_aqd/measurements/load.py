@@ -5,6 +5,7 @@ from datetime import date
 import prefect
 from prefect.task_runners import BaseTaskRunner
 from prefect_dask.task_runners import DaskTaskRunner
+import dask
 import typer
 import requests
 import pandas as pd
@@ -226,13 +227,14 @@ def load_eeq_aqd_measurements(
         time_coverage
     ).result()
 
-    for batch in _chunked(report_urls, batch_size):
-        download_reports.submit(
-            batch,
-            table,
-            append=True,
-            task_runner=flow_context.task_runner,
-        )
+    with dask.config.set({'distributed.nanny.environ.MALLOC_TRIM_THRESHOLD_': 0}):
+        for batch in _chunked(report_urls, batch_size):
+            download_reports.submit(
+                batch,
+                table,
+                append=True,
+                task_runner=flow_context.task_runner,
+            )
 
 
 if __name__ == '__main__':
