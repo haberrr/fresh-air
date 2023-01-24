@@ -5,7 +5,6 @@ from datetime import date
 import prefect
 from prefect.task_runners import BaseTaskRunner
 from prefect_dask.task_runners import DaskTaskRunner
-import dask
 import typer
 import requests
 import pandas as pd
@@ -181,10 +180,14 @@ def get_eea_aqd_measurement_report_batch_data(
 
 @prefect.flow(
     name='Load EEA AQD measurements',
-    task_runner=DaskTaskRunner(cluster_kwargs={
-        'n_workers': 2,
-        'threads_per_worker': 2,
-    }),
+    task_runner=DaskTaskRunner(
+        cluster_kwargs={
+            'n_workers': 1,
+            'threads_per_worker': 8,
+            'memory_spill_fraction': 1.0,
+            'memory_pause_fraction': 1.0,
+        },
+    ),
 )
 def load_eeq_aqd_measurements(
         country_code: Optional[str] = None,
@@ -216,7 +219,6 @@ def load_eeq_aqd_measurements(
         timeout = 10 * batch_size
 
     download_reports = get_eea_aqd_measurement_report_batch_data.with_options(timeout_seconds=timeout)
-
     report_urls = get_eea_aqd_measurement_report_urls.submit(
         country_code,
         pollutant_code,
@@ -226,14 +228,13 @@ def load_eeq_aqd_measurements(
         time_coverage
     ).result()
 
-    with dask.config.set({'distributed.nanny.environ.MALLOC_TRIM_THRESHOLD_': 0}):
-        for batch in _chunked(report_urls, batch_size):
-            download_reports.submit(
-                batch,
-                table,
-                append=True,
-                task_runner=flow_context.task_runner,
-            )
+    for batch in _chunked(report_urls, batch_size):
+        download_reports.submit(
+            batch,
+            table,
+            append=True,
+            task_runner=flow_context.task_runner,
+        )
 
 
 if __name__ == '__main__':
