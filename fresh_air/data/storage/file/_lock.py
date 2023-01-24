@@ -1,7 +1,7 @@
 from typing import Optional
 
 from prefect.task_runners import BaseTaskRunner
-from prefect_dask import DaskTaskRunner, get_dask_client
+from prefect_dask import DaskTaskRunner
 import dask.distributed
 
 
@@ -11,7 +11,10 @@ class Lock:
         self.full_file_path = full_file_path
 
         if isinstance(self.task_runner, DaskTaskRunner):
-            self._lock = dask.distributed.Lock(self.full_file_path)
+            try:
+                self._lock = dask.distributed.Lock(self.full_file_path)
+            except ValueError:
+                pass
 
     def acquire(self) -> None:
         if hasattr(self, '_lock'):

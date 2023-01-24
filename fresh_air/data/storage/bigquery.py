@@ -1,6 +1,6 @@
 import os
-from datetime import datetime
 from functools import cache
+from itertools import chain
 from typing import List, Dict, Any, Optional, Tuple, Union
 
 from google.cloud import bigquery
@@ -8,7 +8,7 @@ from google.cloud import bigquery
 from fresh_air._logging import get_logger
 from fresh_air.data.storage.base import Resource, SchemaField
 from fresh_air.config import settings
-
+from fresh_air.data.storage.meta import add_meta, meta_fields
 
 logger = get_logger()
 
@@ -98,9 +98,8 @@ class BigQueryTable(Resource):
             write_disposition = bigquery.job.WriteDisposition.WRITE_TRUNCATE
 
         bq_client = get_client()
-        etl_timestamp = datetime.now().timestamp()
         job = bq_client.load_table_from_json(
-            json_rows=({**row, '_etl_timestamp': etl_timestamp} for row in data),
+            json_rows=add_meta(data),
             destination=self._table,
             job_config=bigquery.LoadJobConfig(
                 schema=self._table.schema,
@@ -118,7 +117,7 @@ class BigQueryTable(Resource):
     @cache
     def _table(self) -> bigquery.Table:
         schema = []
-        for field in self.schema:
+        for field in chain(self.schema, meta_fields):
             if isinstance(field.field_type, type):
                 field_type = BIGQUERY_TYPE.get(field.field_type.__name__, 'STRING')
             elif isinstance(field.field_type, str):
@@ -134,14 +133,6 @@ class BigQueryTable(Resource):
                     mode=field.mode,
                 )
             )
-
-        schema.append(
-            bigquery.SchemaField(
-                name='_etl_timestamp',
-                field_type='TIMESTAMP',
-                description='Technical field, timestamp of the ETL job.',
-            )
-        )
 
         table = bigquery.Table(
             f'{self.project_id}.{self.dataset_id}.{self.table_id}',  # noqa

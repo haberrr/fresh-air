@@ -5,7 +5,8 @@ from prefect.task_runners import BaseTaskRunner
 
 from fresh_air.data.storage.base import SchemaField
 from fresh_air.data.storage.file._lock import Lock
-from fresh_air.data.storage.file.base import BaseFile, _add_meta, _meta_fields
+from fresh_air.data.storage.file.base import BaseFile
+from fresh_air.data.storage.meta import meta_fields, add_meta
 
 AVRO_TYPE = {
     'str': 'string',
@@ -62,7 +63,7 @@ class AvroFile(BaseFile):
         self._parsed_schema = parse_schema({
             'name': self.file_name,
             'type': 'record',
-            'fields': [_convert_field_to_avro(field) for field in schema + _meta_fields]
+            'fields': [_convert_field_to_avro(field) for field in schema + meta_fields]
         })
 
     def write(
@@ -70,6 +71,7 @@ class AvroFile(BaseFile):
             records: Iterable[Dict[str, Any]],
             append: bool = True,
             task_runner: Optional[BaseTaskRunner] = None,
+            **kwargs,
     ) -> None:
         """
         Write lines to an Avro file.
@@ -83,7 +85,7 @@ class AvroFile(BaseFile):
 
         with Lock(self._full_path, task_runner):
             with open(self._full_path, ('a+' if append else 'w') + 'b') as f:
-                writer(f, self._parsed_schema, _add_meta(records), codec=self.codec)
+                writer(f, self._parsed_schema, add_meta(records), codec=self.codec)
 
     def read(self) -> Iterable[Dict[str, Any]]:
         """

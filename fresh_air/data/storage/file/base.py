@@ -1,27 +1,12 @@
 import os
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Iterable, Dict, Any, Optional
 
 from prefect.task_runners import BaseTaskRunner
 
 from fresh_air._logging import get_logger
-from fresh_air.data.storage.base import SchemaField
 
 logger = get_logger(__name__)
-
-_meta_fields = [
-    SchemaField(
-        name='_etl_timestamp',
-        field_type='timestamp',
-        description='Timestamp when the record was saved.',
-    ),
-]
-
-
-def _add_meta(records: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
-    ts = datetime.now().timestamp()
-    return ({**record, '_etl_timestamp': ts} for record in records)
 
 
 class BaseFile(ABC):
@@ -41,6 +26,7 @@ class BaseFile(ABC):
             records: Iterable[Dict[str, Any]],
             append: bool = True,
             task_runner: Optional[BaseTaskRunner] = None,
+            **kwargs,
     ):
         pass
 
