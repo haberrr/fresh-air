@@ -10,7 +10,7 @@ import requests
 import pandas as pd
 
 from fresh_air._logging import get_logger
-from fresh_air.data.flows.eea_aqd.measurements.table import table, _columns_config
+from fresh_air.data.flows.eea_aqd.measurements.table import table, meta_table, _columns_config
 from fresh_air.data.flows.tasks import write_data
 from fresh_air.data.storage import Resource
 
@@ -227,6 +227,12 @@ def load_eeq_aqd_measurements(
         station,
         time_coverage
     ).result()
+
+    write_data.submit(
+        [{'report_url': report_url} for report_url in report_urls],
+        meta_table,
+        task_runner=flow_context.task_runner,
+    )
 
     for batch in _chunked(report_urls, batch_size):
         download_reports.submit(

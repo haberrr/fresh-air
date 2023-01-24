@@ -107,3 +107,10 @@ table = storage_class(
     partition_field='begin_ts',
     partition_scale='MONTH',
 )
+
+meta_table = storage_class(
+    path=('eea_aqd', 'measurement_report_urls'),
+    schema=[
+        SchemaField(name='report_url', field_type=str),
+    ],
+)
