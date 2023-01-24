@@ -27,7 +27,6 @@ class LocalResource(Resource):
             self,
             path: Tuple[str, ...] | str,
             project_id: Optional[str] = None,
-            data: Optional[List[Dict[str, Any]]] = None,
             schema: Optional[Any] = None,
             **kwargs,
     ):
@@ -40,13 +39,11 @@ class LocalResource(Resource):
                 as a name of the object. When string should represent the same location, with '.' separating leves of
                 the hierarchy.
             project_id: (Optional) root directory of the path hierarchy.
-            data: Optional data, to be written into the resource location as defined by `path`.
             schema: Ignored.
         """
         self.path = path if isinstance(path, tuple) else tuple(path.split('.'))
         self.project_id = project_id or self.DEFAULT_PROJ_DIR
 
-        self.data = data
         self.schema = schema
 
         self._file = self.FILE_CLASS(self._dir_path, self.path[-1], schema=self.schema)
@@ -58,7 +55,7 @@ class LocalResource(Resource):
 
     def write(
             self,
-            data: Optional[List[Dict[str, Any]]] = None,
+            data: List[Dict[str, Any]],
             append: bool = True,
             task_runner: Optional[prefect.task_runners.BaseTaskRunner] = None,
             **kwargs,
@@ -67,19 +64,13 @@ class LocalResource(Resource):
         Write resource data to the file.
 
         Args:
-            data: Data to write to the file. When provided replaces the data from the constructor.
+            data: Data to write to the file.
             append: Whether to append or overwrite data.
             task_runner: Task runner for the current flow run. Used to acquire lock on the file being written.
             **kwargs: Added for compatibility, ignored.
         """
-        if data is not None:
-            self.data = data
-
-        if self.data is None:
-            raise ValueError('No data provided. Please provide data upon initialization or write call.')
-
         logger.info('Saving %s', self.path)
-        self._file.write(self.data, append=append, task_runner=task_runner)
+        self._file.write(data, append=append, task_runner=task_runner)
 
     def read(self, **kwargs) -> List[Dict[str, Any]]:
         """Read resource data from file.
@@ -88,6 +79,4 @@ class LocalResource(Resource):
             **kwargs: Added for compatibility, ignored.
         """
         logger.info('Reading %s', self.path)
-
-        self.data = list(self._file.read())
-        return self.data
+        return list(self._file.read())

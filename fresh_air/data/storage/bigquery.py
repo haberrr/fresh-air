@@ -13,7 +13,6 @@ from fresh_air.config import settings
 logger = get_logger()
 
 
-@cache
 def get_client():
     """Provides single BigQuery client."""
     credentials_json = settings.get('credentials.etl_service_account_json')
@@ -46,7 +45,6 @@ class BigQueryTable(Resource):
             path: Tuple[str, str] | str,
             schema: List[SchemaField],
             project_id: Optional[str] = None,
-            data: Optional[List[Dict[str, Any]]] = None,
             clustering_fields: Optional[List[str]] = None,
             partition_field: Optional[str] = None,
             partition_scale: Optional[Union[bigquery.TimePartitioningType, str]] = None,
@@ -59,7 +57,6 @@ class BigQueryTable(Resource):
             path: Unique identification path for the resource. When tuple of strings, the first element should be of
                 the form (project_id, dataset_id, table_name). When string, should represent the same location,
                 with '.' separating leves of the hierarchy.
-            data: Optional data, to be written into the resource location as defined by `path`.
             schema: Table schema as a list of SchemaField objects. Field type should be one of the supported
                 BigQuery types.
             project_id: BigQuery project ID to save data to.
@@ -73,7 +70,6 @@ class BigQueryTable(Resource):
         self.project_id = project_id or settings.get('storage.bigquery.project_id')
 
         self.schema = schema
-        self.data = data
         self.clustering_fields = clustering_fields
 
         if (partition_scale is None) ^ (partition_field is None):
@@ -85,26 +81,15 @@ class BigQueryTable(Resource):
         self.partition_field = partition_field
         self.partition_scale = partition_scale
 
-    def write(
-            self,
-            data: Optional[List[Dict[str, Any]]] = None,
-            append: bool = True,
-            **kwargs,
-    ) -> None:
+    def write(self, data: List[Dict[str, Any]], append: bool = True, **kwargs) -> None:
         """
         Write resource data to the BigQuery table.
 
         Args:
-            data: Data to write to the file. When provided replaces the data from the constructor.
+            data: Data to write to the file.
             append: Whether to append or overwrite data.
             **kwargs: For compatibility purposes, ignored.
         """
-        if data is not None:
-            self.data = data
-
-        if self.data is None:
-            raise ValueError('No data provided. Please provide data upon initialization or write call.')
-
         self._ensure_table_exists()
 
         if append:
@@ -115,7 +100,7 @@ class BigQueryTable(Resource):
         bq_client = get_client()
         etl_timestamp = datetime.now().timestamp()
         job = bq_client.load_table_from_json(
-            json_rows=({**row, '_etl_timestamp': etl_timestamp} for row in self.data),
+            json_rows=({**row, '_etl_timestamp': etl_timestamp} for row in data),
             destination=self._table,
             job_config=bigquery.LoadJobConfig(
                 schema=self._table.schema,

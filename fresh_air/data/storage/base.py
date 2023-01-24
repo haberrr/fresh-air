@@ -22,14 +22,13 @@ class Resource(ABC):
             self,
             path: Tuple[str, ...] | str,
             project_id: Optional[str] = None,
-            data: Optional[List[Dict[str, Any]]] = None,
             schema: Optional[List[SchemaField]] = None,
             **kwargs,
     ):
         pass
 
     @abstractmethod
-    def write(self, data: Optional[List[Dict[str, Any]]] = None, append: bool = True, **kwargs) -> None:
+    def write(self, data: List[Dict[str, Any]], append: bool = True, **kwargs) -> None:
         pass
 
     @abstractmethod
