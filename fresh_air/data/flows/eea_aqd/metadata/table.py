@@ -111,7 +111,7 @@ _columns_config = [
     dict(
         name='AirQualityStationArea',
         field=SchemaField(
-            name='Air_quality_station_area',
+            name='air_quality_station_area',
             field_type=str,
         ),
     ),
