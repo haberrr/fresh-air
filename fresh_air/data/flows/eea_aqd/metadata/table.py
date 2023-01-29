@@ -1,6 +1,6 @@
 from fresh_air.data.storage import resource_class_factory
 from fresh_air.data.storage.base import SchemaField
-from fresh_air.data.flows.eea_aqd._utils import _url_parse
+from fresh_air.data.flows.eea_aqd._utils import _url_parse, _to_timestamp
 
 storage_class = resource_class_factory()
 
@@ -56,6 +56,7 @@ _columns_config = [
             name='observation_begin_ts',
             field_type='timestamp',
         ),
+        preprocess=_to_timestamp,
     ),
     dict(
         name='ObservationDateEnd',
@@ -63,6 +64,7 @@ _columns_config = [
             name='observation_end_ts',
             field_type='timestamp',
         ),
+        preprocess=_to_timestamp,
     ),
     dict(
         name='Projection',
