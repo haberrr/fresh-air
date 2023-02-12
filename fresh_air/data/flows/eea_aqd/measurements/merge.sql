@@ -1,5 +1,5 @@
-MERGE INTO {table} AS T
-    USING {source} AS S
+MERGE INTO `{table}` AS T
+    USING `{source}` AS S
     ON T.air_quality_station = S.air_quality_station
         AND T.air_pollutant_code = S.air_pollutant_code
         AND T.measurement_ts = S.measurement_ts

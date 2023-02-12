@@ -91,52 +91,6 @@ def get_eea_aqd_measurement_report_urls(
 
 
 @prefect.task(
-    name='Get EEA AQD measurement report data',
-    retries=3,
-    retry_delay_seconds=15,
-)
-def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]:
-    """
-    Download and preprocess report data.
-
-    This function will select a subset of the columns and perform basic preprocessing for a part of them (like
-    extracting pollutant code from the URL to the vocabulary or converting datetime string to float timestamp).
-
-    Args:
-        report_url: URL to download report from. Normally this should be one of the URLs output
-            by the `get_eea_aqd_measurement_report_urls()`.
-
-    Returns:
-        Preprocessed report data.
-    """
-    logger = get_logger(__name__)
-    logger.info('Downloading report from URL: %s', report_url)
-
-    report = pd.read_csv(
-        report_url
-    )[[
-        col['name'] for col in _columns_config if 'name' in col
-    ]].assign(
-        **{
-            col['name']: col['preprocess'](col['name']) for col in _columns_config if 'preprocess' in col
-        },
-        _report_url=report_url,
-    ).rename(columns={
-        col['name']: col['field'].name for col in _columns_config if 'name' in col
-    }).astype({
-        col['field'].name: col['field'].field_type for col in _columns_config if col.get('convert', False)
-    }).replace({
-        float('nan'): None
-    }).to_dict(
-        orient='records',
-    )
-
-    logger.info('Report (URL: %s) downloaded, record count: %s', report_url, len(report))
-
-    return report
-
-
-@prefect.task(
     name='Get EEA AQD measurement report data - batched',
     retries=3,
     retry_delay_seconds=15,
@@ -177,6 +131,72 @@ def get_eea_aqd_measurement_report_batch_data(
         append,
         task_runner,
     )
+
+
+@prefect.task(
+    name='Get EEA AQD measurement report data',
+    retries=3,
+    retry_delay_seconds=15,
+)
+def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]:
+    """
+    Download and preprocess report data.
+
+    This function will select a subset of the columns and perform basic preprocessing for a part of them (like
+    extracting pollutant code from the URL to the vocabulary or converting datetime string to float timestamp).
+
+    Args:
+        report_url: URL to download report from. Normally this should be one of the URLs output
+            by the `get_eea_aqd_measurement_report_urls()`.
+
+    Returns:
+        Preprocessed report data.
+    """
+    logger = get_logger(__name__)
+    logger.info('Downloading report from URL: %s', report_url)
+
+    report = pd.read_csv(
+        report_url
+    )[[
+        col['name'] for col in _columns_config if 'name' in col
+    ]].assign(
+        **{
+            col['name']: col['preprocess'](col['name']) for col in _columns_config if 'preprocess' in col
+        },
+    ).rename(columns={
+        col['name']: col['field'].name for col in _columns_config if 'name' in col
+    }).astype({
+        col['field'].name: col['field'].field_type for col in _columns_config if col.get('convert', False)
+    }).replace({
+        float('nan'): None
+    }).to_dict(
+        orient='records',
+    )
+
+    logger.info('Report (URL: %s) downloaded, record count: %s', report_url, len(report))
+
+    return report
+
+
+@prefect.task(
+    name='Update EEA AQD measurement data',
+    retries=3,
+)
+def update_eea_aqd_measurements(stg_table) -> None:
+    """
+    Update target measurements table with newly downloaded report data.
+
+    Args:
+        stg_table: Temporary table with newly downloaded measurements data.
+    """
+    logger = get_logger(__name__)
+
+    if not isinstance(table, BigQueryTable) or not isinstance(stg_table, BigQueryTable):
+        logger.warning('Target resource is not BigQueryTable. Flow won\'t update data the target table.')
+        return
+
+    query = _read_query_from_neighbour(__file__, 'merge.sql')
+    table.run_query(query, source=stg_table.full_table_name, wait_for_result=True)
 
 
 @prefect.flow(
@@ -276,8 +296,6 @@ def eea_aqd_measurements_core(
         time_coverage: Whether to request data from the past 7 days of for the whole year.
         batch_size: Size of the report URLs batch to assign to a single Dask worker/thread.
     """
-    logger = get_logger()
-
     stg_table = eea_adq_measurements_stg(
         country_code=country_code,
         pollutant_code=pollutant_code,
@@ -288,12 +306,7 @@ def eea_aqd_measurements_core(
         batch_size=batch_size,
     )
 
-    if not isinstance(table, BigQueryTable) or not isinstance(stg_table, BigQueryTable):
-        logger.warning('Target resource is not BigQueryTable. Flow won\'t update data the target table.')
-        return
-
-    query = _read_query_from_neighbour(__file__, 'merge.sql')
-    table.run_query(query, source=stg_table.full_table_name, wait_for_result=True)
+    update_eea_aqd_measurements(stg_table)
 
 
 if __name__ == '__main__':
