@@ -10,9 +10,10 @@ import requests
 import pandas as pd
 
 from fresh_air._logging import get_logger
-from fresh_air.data.flows.eea_aqd.measurements.table import table, meta_table, _columns_config
+from fresh_air.data.flows._utils import _read_query_from_neighbour
+from fresh_air.data.flows.eea_aqd.measurements.table import meta_table, _columns_config, stg_table_factory, table
 from fresh_air.data.flows.tasks import write_data
-from fresh_air.data.storage import Resource
+from fresh_air.data.storage import Resource, BigQueryTable
 
 
 class TimeCoverage(str, Enum):
@@ -90,52 +91,6 @@ def get_eea_aqd_measurement_report_urls(
 
 
 @prefect.task(
-    name='Get EEA AQD measurement report data',
-    retries=3,
-    retry_delay_seconds=15,
-)
-def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]:
-    """
-    Download and preprocess report data.
-
-    This function will select a subset of the columns and perform basic preprocessing for a part of them (like
-    extracting pollutant code from the URL to the vocabulary or converting datetime string to float timestamp).
-
-    Args:
-        report_url: URL to download report from. Normally this should be one of the URLs output
-            by the `get_eea_aqd_measurement_report_urls()`.
-
-    Returns:
-        Preprocessed report data.
-    """
-    logger = get_logger(__name__)
-    logger.info('Downloading report from URL: %s', report_url)
-
-    report = pd.read_csv(
-        report_url
-    )[[
-        col['name'] for col in _columns_config if 'name' in col
-    ]].assign(
-        **{
-            col['name']: col['preprocess'](col['name']) for col in _columns_config if 'preprocess' in col
-        },
-        _report_url=report_url,
-    ).rename(columns={
-        col['name']: col['field'].name for col in _columns_config if 'name' in col
-    }).astype({
-        col['field'].name: col['field'].field_type for col in _columns_config if col.get('convert', False)
-    }).replace({
-        float('nan'): None
-    }).to_dict(
-        orient='records',
-    )
-
-    logger.info('Report (URL: %s) downloaded, record count: %s', report_url, len(report))
-
-    return report
-
-
-@prefect.task(
     name='Get EEA AQD measurement report data - batched',
     retries=3,
     retry_delay_seconds=15,
@@ -178,8 +133,74 @@ def get_eea_aqd_measurement_report_batch_data(
     )
 
 
+@prefect.task(
+    name='Get EEA AQD measurement report data',
+    retries=3,
+    retry_delay_seconds=15,
+)
+def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]:
+    """
+    Download and preprocess report data.
+
+    This function will select a subset of the columns and perform basic preprocessing for a part of them (like
+    extracting pollutant code from the URL to the vocabulary or converting datetime string to float timestamp).
+
+    Args:
+        report_url: URL to download report from. Normally this should be one of the URLs output
+            by the `get_eea_aqd_measurement_report_urls()`.
+
+    Returns:
+        Preprocessed report data.
+    """
+    logger = get_logger(__name__)
+    logger.info('Downloading report from URL: %s', report_url)
+
+    report = pd.read_csv(
+        report_url
+    )[[
+        col['name'] for col in _columns_config if 'name' in col
+    ]].assign(
+        **{
+            col['name']: col['preprocess'](col['name']) for col in _columns_config if 'preprocess' in col
+        },
+    ).rename(columns={
+        col['name']: col['field'].name for col in _columns_config if 'name' in col
+    }).astype({
+        col['field'].name: col['field'].field_type for col in _columns_config if col.get('convert', False)
+    }).replace({
+        float('nan'): None
+    }).to_dict(
+        orient='records',
+    )
+
+    logger.info('Report (URL: %s) downloaded, record count: %s', report_url, len(report))
+
+    return report
+
+
+@prefect.task(
+    name='Update EEA AQD measurement data',
+    retries=3,
+)
+def update_eea_aqd_measurements(stg_table) -> None:
+    """
+    Update target measurements table with newly downloaded report data.
+
+    Args:
+        stg_table: Temporary table with newly downloaded measurements data.
+    """
+    logger = get_logger(__name__)
+
+    if not isinstance(table, BigQueryTable) or not isinstance(stg_table, BigQueryTable):
+        logger.warning('Target resource is not BigQueryTable. Flow won\'t update data the target table.')
+        return
+
+    query = _read_query_from_neighbour(__file__, 'merge.sql')
+    table.run_query(query, source=stg_table.full_table_name, wait_for_result=True)
+
+
 @prefect.flow(
-    name='Load EEA AQD measurements',
+    name='Save EEA AQD measurements (staging)',
     task_runner=DaskTaskRunner(
         cluster_kwargs={
             'n_workers': 1,
@@ -189,7 +210,7 @@ def get_eea_aqd_measurement_report_batch_data(
         },
     ),
 )
-def load_eeq_aqd_measurements(
+def eea_adq_measurements_stg(
         country_code: Optional[str] = None,
         pollutant_code: Optional[int] = None,
         year_from: Optional[int] = None,
@@ -197,9 +218,9 @@ def load_eeq_aqd_measurements(
         station: Optional[str] = None,
         time_coverage: TimeCoverage = 'Last7days',
         batch_size: int = 10,
-) -> None:
+) -> Resource:
     """
-    Retrieve report URLs, download, preprocess and save reports.
+    Retrieve report URLs, download, preprocess and save reports to a temporary table.
 
     Args:
         country_code: Two character country code of the air quality station to retrieve measurements from.
@@ -210,8 +231,12 @@ def load_eeq_aqd_measurements(
         station: Station code to request data from.
         time_coverage: Whether to request data from the past 7 days of for the whole year.
         batch_size: Size of the report URLs batch to assign to a single Dask worker/thread.
+
+    Returns:
+        Instance of the temporary table resource where the data was saved.
     """
     flow_context = prefect.context.get_run_context()
+    stg_table = stg_table_factory(flow_context.flow_run.flow_id)
 
     if time_coverage == TimeCoverage.Year:
         timeout = 30 * batch_size
@@ -237,11 +262,52 @@ def load_eeq_aqd_measurements(
     for batch in _chunked(report_urls, batch_size):
         download_reports.submit(
             batch,
-            table,
+            stg_table,
             append=True,
             task_runner=flow_context.task_runner,
         )
 
+    return stg_table
+
+
+@prefect.flow(
+    name='Save EEA AQD measurements',
+)
+def eea_aqd_measurements_core(
+        country_code: Optional[str] = None,
+        pollutant_code: Optional[int] = None,
+        year_from: Optional[int] = None,
+        year_to: Optional[int] = None,
+        station: Optional[str] = None,
+        time_coverage: TimeCoverage = 'Last7days',
+        batch_size: int = 10,
+) -> None:
+    """
+    Retrieve report URLs, download, preprocess, save reports to a temporary table
+    then update core storage table with fresh report data.
+
+    Args:
+        country_code: Two character country code of the air quality station to retrieve measurements from.
+        pollutant_code: Code of the pollutant.
+            Vocabulary with the possible values for the codes: https://dd.eionet.europa.eu/vocabulary/aq/pollutant/view.
+        year_from: Request data starting from this year.
+        year_to: Request data up to this year inclusive.
+        station: Station code to request data from.
+        time_coverage: Whether to request data from the past 7 days of for the whole year.
+        batch_size: Size of the report URLs batch to assign to a single Dask worker/thread.
+    """
+    stg_table = eea_adq_measurements_stg(
+        country_code=country_code,
+        pollutant_code=pollutant_code,
+        year_from=year_from,
+        year_to=year_to,
+        station=station,
+        time_coverage=time_coverage,
+        batch_size=batch_size,
+    )
+
+    update_eea_aqd_measurements(stg_table)
+
 
 if __name__ == '__main__':
-    typer.run(load_eeq_aqd_measurements)
+    typer.run(eea_aqd_measurements_core)

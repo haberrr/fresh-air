@@ -1,6 +1,6 @@
 from fresh_air.data.storage import resource_class_factory
 from fresh_air.data.storage.base import SchemaField
-from fresh_air.data.flows.eea_aqd._utils import _url_parse, _to_timestamp
+from fresh_air.data.flows._utils import _url_parse, _to_timestamp
 
 storage_class = resource_class_factory()
 
