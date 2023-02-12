@@ -297,4 +297,4 @@ def eea_aqd_measurements_core(
 
 
 if __name__ == '__main__':
-    typer.run(eea_adq_measurements_stg)
+    typer.run(eea_aqd_measurements_core)
