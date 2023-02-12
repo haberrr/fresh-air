@@ -4,7 +4,7 @@ import typer
 from prefect.context import get_settings_context
 from prefect.deployments import Deployment
 
-from fresh_air.data.flows.eea_aqd.measurements.load import load_eeq_aqd_measurements
+from fresh_air.data.flows.eea_aqd.measurements.load import eea_aqd_measurements_core
 
 Config = namedtuple('Config', ['pollutant', 'code'])
 
@@ -27,7 +27,7 @@ def deploy():
     for config in configs:
         # noinspection PyTypeChecker
         deployment: Deployment = Deployment.build_from_flow(
-            flow=load_eeq_aqd_measurements,
+            flow=eea_aqd_measurements_core,
             name=f'EEA AQD: update {config.pollutant} measurements',
             version=1,
             parameters={
