@@ -16,7 +16,7 @@ logger = get_logger()
 def get_client():
     """Provides single BigQuery client."""
     credentials_json = settings.get('credentials.etl_service_account_json')
-    if credentials_json is not None and os.path.exists(credentials_json):
+    if credentials_json is not None and os.path.exists(os.path.expanduser(credentials_json)):
         logger.debug('Using provided service account credentials for BigQuery client')
         return bigquery.Client.from_service_account_json(
             os.path.expanduser(credentials_json)
@@ -81,6 +81,10 @@ class BigQueryTable(Resource):
         self.partition_field = partition_field
         self.partition_scale = partition_scale
 
+    @property
+    def full_table_name(self):
+        return f'{self.project_id}.{self.dataset_id}.{self.table_id}'
+
     def write(self, data: List[Dict[str, Any]], append: bool = True, **kwargs) -> None:
         """
         Write resource data to the BigQuery table.
@@ -110,8 +114,42 @@ class BigQueryTable(Resource):
         job.result()
 
     def read(self, **kwargs) -> List[Dict[str, Any]]:
+        """
+        Read data from the table.
+
+        Args:
+            **kwargs: Ignored, added for compatibility reasons.
+
+        Returns:
+            List of rows from the table.
+        """
         bq_client = get_client()
         return [dict(row) for row in bq_client.list_rows(self._table)]
+
+    def run_query(self, query: str, wait_for_result: bool = False, **kwargs) -> bigquery.QueryJob:
+        """
+        Run query against this table.
+
+        Args:
+            query: Query to run. Might contain "{table}" format placeholder, which will be filled with the fully
+             qualified table name.
+            wait_for_result: Whether to wait for the job to finish.
+            **kwargs: Any additional parameters will be passed to the `query.format` method.
+
+        Returns:
+            BigQuery QueryJob object.
+        """
+        bq_client = get_client()
+        self._ensure_table_exists()
+
+        job = bq_client.query(
+            query.format(table=self.full_table_name, **kwargs)
+        )
+
+        if wait_for_result:
+            job.result()
+
+        return job
 
     @property
     @cache
@@ -135,7 +173,7 @@ class BigQueryTable(Resource):
             )
 
         table = bigquery.Table(
-            f'{self.project_id}.{self.dataset_id}.{self.table_id}',  # noqa
+            self.full_table_name,  # noqa
             schema=schema,
         )
         table.clustering_fields = self.clustering_fields
