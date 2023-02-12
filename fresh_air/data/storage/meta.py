@@ -11,16 +11,17 @@ meta_fields = [
         field_type='timestamp',
         description='Technical field, timestamp of the ETL job.',
     ),
-    SchemaField(
-        name='_etl_prefect_flow_run_id',
-        field_type='string',
-        description='Technical field, UUID of the Prefect flow run.',
-    ),
-    SchemaField(
-        name='_etl_prefect_task_run_id',
-        field_type='string',
-        description='Technical field, UUID of the Prefect task run.',
-    ),
+    # Too much data usage, have to drop it for now.
+    # SchemaField(
+    #     name='_etl_prefect_flow_run_id',
+    #     field_type='string',
+    #     description='Technical field, UUID of the Prefect flow run.',
+    # ),
+    # SchemaField(
+    #     name='_etl_prefect_task_run_id',
+    #     field_type='string',
+    #     description='Technical field, UUID of the Prefect task run.',
+    # ),
 ]
 
 
@@ -44,6 +45,6 @@ def add_meta(records: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
         yield {
             **record,
             '_etl_timestamp': ts,
-            '_etl_prefect_flow_run_id': flow_run_id,
-            '_etl_prefect_task_run_id': task_run_id,
+            # '_etl_prefect_flow_run_id': flow_run_id,
+            # '_etl_prefect_task_run_id': task_run_id,
         }
