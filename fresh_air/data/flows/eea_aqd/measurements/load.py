@@ -236,7 +236,7 @@ def eea_adq_measurements_stg(
         Instance of the temporary table resource where the data was saved.
     """
     flow_context = prefect.context.get_run_context()
-    stg_table = stg_table_factory(flow_context.flow_run.flow_id)
+    stg_table = stg_table_factory(flow_context.flow_run.id)
 
     if time_coverage == TimeCoverage.Year:
         timeout = 30 * batch_size
