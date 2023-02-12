@@ -251,7 +251,7 @@ def eea_adq_measurements_stg(
 
 
 @prefect.flow(
-    name='Save EEA AQD measurements (staging)',
+    name='Save EEA AQD measurements',
 )
 def eea_aqd_measurements_core(
         country_code: Optional[str] = None,
