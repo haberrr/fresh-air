@@ -2,7 +2,7 @@
 .idea
 .mypy_cache
 ./data
-./dist/
+dist/
 __pycache__
 .ipynb_checkpoints
 
