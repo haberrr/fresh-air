@@ -1,4 +1,5 @@
 import os
+import time
 from functools import cache
 from itertools import chain
 from typing import List, Dict, Any, Optional, Tuple, Union
@@ -147,7 +148,8 @@ class BigQueryTable(Resource):
         )
 
         if wait_for_result:
-            job.result()
+            while not job.done():
+                time.sleep(0.5)
 
         return job
 

@@ -10,9 +10,8 @@ import requests
 import pandas as pd
 
 from fresh_air._logging import get_logger
-from fresh_air.data.flows._utils import _read_query_from_neighbour
 from fresh_air.data.flows.eea_aqd.measurements.table import meta_table, _columns_config, stg_table_factory, table
-from fresh_air.data.flows.tasks import write_data
+from fresh_air.data.flows.tasks import write_data, bigquery_merge
 from fresh_air.data.storage import Resource, BigQueryTable
 
 
@@ -178,27 +177,6 @@ def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]
     return report
 
 
-@prefect.task(
-    name='Update EEA AQD measurement data',
-    retries=3,
-)
-def update_eea_aqd_measurements(stg_table) -> None:
-    """
-    Update target measurements table with newly downloaded report data.
-
-    Args:
-        stg_table: Temporary table with newly downloaded measurements data.
-    """
-    logger = get_logger(__name__)
-
-    if not isinstance(table, BigQueryTable) or not isinstance(stg_table, BigQueryTable):
-        logger.warning('Target resource is not BigQueryTable. Flow won\'t update data the target table.')
-        return
-
-    query = _read_query_from_neighbour(__file__, 'merge.sql')
-    table.run_query(query, source=stg_table.full_table_name, wait_for_result=True)
-
-
 @prefect.flow(
     name='Save EEA AQD measurements (staging)',
     task_runner=DaskTaskRunner(
@@ -296,6 +274,8 @@ def eea_aqd_measurements_core(
         time_coverage: Whether to request data from the past 7 days of for the whole year.
         batch_size: Size of the report URLs batch to assign to a single Dask worker/thread.
     """
+    logger = get_logger(__name__)
+
     stg_table = eea_adq_measurements_stg(
         country_code=country_code,
         pollutant_code=pollutant_code,
@@ -306,7 +286,17 @@ def eea_aqd_measurements_core(
         batch_size=batch_size,
     )
 
-    update_eea_aqd_measurements(stg_table)
+    if not isinstance(table, BigQueryTable) or not isinstance(stg_table, BigQueryTable):
+        logger.warning('Target resource is not BigQueryTable. Flow won\'t update data the target table.')
+        return
+
+    bigquery_merge(
+        source=stg_table,
+        target=table,
+        merge_keys=['air_quality_station', 'air_pollutant_code', 'measurement_ts'],
+        condition_keys=['concentration', 'validity', 'verification'],
+        wait_for_result=True,
+    )
 
 
 if __name__ == '__main__':
