@@ -81,6 +81,6 @@ def stg_table_factory(flow_id: str) -> Resource:
         Resource object for the table.
     """
     return storage_class(
-        path=('stg', f'eea_adq__measurements__{flow_id}'),
+        path=('stg', f'eea_aqd__measurements__{flow_id}'),
         schema=[col['field'] for col in _columns_config],
     )
