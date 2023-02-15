@@ -294,8 +294,14 @@ def eea_aqd_measurements_core(
         logger.warning('Target resource is not BigQueryTable. Flow won\'t update data the target table.')
         return
 
+    deduplication_query = f'''
+    SELECT *
+    FROM `{stg_table.full_table_name}`
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY air_quality_station, air_pollutant_code, measurement_ts) = 1
+    '''
+
     bigquery_merge(
-        source=stg_table,
+        source=deduplication_query,
         target=table,
         merge_keys=['air_quality_station', 'air_pollutant_code', 'measurement_ts'],
         condition_keys=['concentration', 'validity', 'verification'],
