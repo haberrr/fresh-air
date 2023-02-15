@@ -98,9 +98,14 @@ class BigQueryTable(Resource):
         self._ensure_table_exists()
 
         if append:
-            write_disposition = bigquery.job.WriteDisposition.WRITE_APPEND
+            job_config = dict(
+                write_disposition=bigquery.job.WriteDisposition.WRITE_APPEND,
+                schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
+            )
         else:
-            write_disposition = bigquery.job.WriteDisposition.WRITE_TRUNCATE
+            job_config = dict(
+                write_disposition=bigquery.job.WriteDisposition.WRITE_TRUNCATE,
+            )
 
         bq_client = get_client()
         job = bq_client.load_table_from_json(
@@ -108,8 +113,7 @@ class BigQueryTable(Resource):
             destination=self._table,
             job_config=bigquery.LoadJobConfig(
                 schema=self._table.schema,
-                write_disposition=write_disposition,
-                schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
+                **job_config,
             )
         )
         job.result()

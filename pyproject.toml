@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fresh-air"
-version = "0.2.2"
+version = "0.2.3"
 description = ""
 authors = ["Andrey Pavlov <pavlov.andrey@pm.me>"]
 readme = "README.md"
