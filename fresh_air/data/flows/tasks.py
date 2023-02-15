@@ -35,9 +35,53 @@ def query_bigquery(query: str) -> List[Dict[str, Any]]:
     return [dict(row) for row in job.result()]
 
 
+@prefect.task(name='BigQuery snapshot', tags=['bigquery'])
+def bigquery_snapshot(
+        source: Union[BigQueryTable, str],
+        target: BigQueryTable,
+        columns: Union[Dict[str, str], List[str]] = None,
+        wait_for_result: bool = True,
+) -> bigquery.QueryJob:
+    """
+    BigQuery task overwrites data in the target table with data from source.
+
+    Args:
+        source: Table containing source data or query providing source data.
+        target: Table to which to append data.
+        columns: Either list of column names or dict containing mapping from source column names to target column names.
+        wait_for_result: Whether to wait for the query job to finish before returning.
+
+    Returns:
+        BigQuery QueryJob instance.
+
+    Raises:
+        TypeError when source type is different from string or BigQueryTable.
+    """
+    if isinstance(columns, dict):
+        columns = ', '.join(f'{s} AS {t}' for s, t in columns.items())
+    elif isinstance(columns, list):
+        columns = ', '.join(columns)
+    else:
+        columns = '*'
+
+    source_definition = _make_source_definition(source)
+
+    query = f'''
+    BEGIN 
+        TRUNCATE TABLE `{target.full_table_name};`
+    
+        INSERT INTO `{target.full_table_name}` AS
+        SELECT {columns}
+        FROM {source_definition};
+    END;
+    '''
+
+    return target.run_query(query, wait_for_result)
+
+
 @prefect.task(name='BigQuery append', tags=['bigquery'])
 def bigquery_append(
-        source: BigQueryTable,
+        source: Union[BigQueryTable, str],
         target: BigQueryTable,
         columns: Union[Dict[str, str], List[str]] = None,
         wait_for_result: bool = True,
@@ -46,7 +90,7 @@ def bigquery_append(
     BigQuery task that append data from source table to the target table.
 
     Args:
-        source: Table containing source data.
+        source: Table or query containing source data.
         target: Table to which to append data.
         columns: Either list of column names or dict containing mapping from source column names to target column names.
         wait_for_result: Whether to wait for the query job to finish before returning.
@@ -61,10 +105,12 @@ def bigquery_append(
     else:
         columns = '*'
 
+    source_definition = _make_source_definition(source)
+
     query = f'''
     INSERT INTO `{target.full_table_name}` AS
     SELECT {columns}
-    FROM `{source.full_table_name}`
+    FROM {source_definition}
     '''
 
     return target.run_query(query, wait_for_result)
@@ -72,7 +118,7 @@ def bigquery_append(
 
 @prefect.task(name='BigQuery merge', tags=['bigquery'])
 def bigquery_merge(
-        source: BigQueryTable,
+        source: Union[BigQueryTable, str],
         target: BigQueryTable,
         merge_keys: List[str],
         condition_keys: List[str] = None,
@@ -83,7 +129,7 @@ def bigquery_merge(
     on `merge_keys` and `condition_keys`.
 
     Args:
-        source: Table containing source data.
+        source: Table or query containing source data.
         target: Table to which to upsert data.
         merge_keys: List of columns comprising primary key for the tables. Based on these keys the tables
          will be joined together.
@@ -96,6 +142,8 @@ def bigquery_merge(
     """
     target_columns = [field.name for field in target._table.schema]
     merge_clause = ' AND '.join(f'T.{key} = S.{key}' for key in merge_keys)
+
+    source_definition = _make_source_definition(source)
 
     if condition_keys is not None:
         condition_clause = 'AND ({})'.format(
@@ -115,10 +163,19 @@ def bigquery_merge(
 
     query = f'''
     MERGE INTO `{target.full_table_name}` AS T
-    USING `{source.full_table_name}` AS S
+    USING {source_definition} AS S
         ON  {merge_clause}
     WHEN MATCHED {condition_clause} THEN {matched_clause}
     WHEN NOT MATCHED THEN {not_matched_clause}
     '''
 
     return target.run_query(query, wait_for_result)
+
+
+def _make_source_definition(source: Union[BigQueryTable, str]) -> str:
+    if isinstance(source, BigQueryTable):
+        return f'`{source.full_table_name}`'
+    elif isinstance(source, str):
+        return f'({source})'
+    else:
+        raise TypeError(f'Unknown source type {type(source)}.')
