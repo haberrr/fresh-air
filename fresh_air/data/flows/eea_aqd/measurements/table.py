@@ -11,6 +11,7 @@ _columns_config = [
             name='air_quality_station',
             field_type=str,
         ),
+        primary_key=True,
     ),
     dict(
         name='AirPollutantCode',
@@ -20,6 +21,7 @@ _columns_config = [
         ),
         preprocess=_url_parse(-1),
         convert=True,
+        primary_key=True,
     ),
     dict(
         name='DatetimeBegin',
@@ -28,6 +30,7 @@ _columns_config = [
             field_type='timestamp',
         ),
         preprocess=_to_timestamp,
+        primary_key=True,
     ),
     dict(
         name='Concentration',

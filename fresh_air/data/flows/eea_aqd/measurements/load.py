@@ -156,6 +156,8 @@ def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]
 
     report = pd.read_csv(
         report_url
+    ).query(
+        'AveragingTime == "hour"'
     )[[
         col['name'] for col in _columns_config if 'name' in col
     ]].assign(
@@ -166,7 +168,9 @@ def get_eea_aqd_measurement_report_data(report_url: str) -> List[Dict[str, Any]]
         col['name']: col['field'].name for col in _columns_config if 'name' in col
     }).astype({
         col['field'].name: col['field'].field_type for col in _columns_config if col.get('convert', False)
-    }).replace({
+    }).drop_duplicates(
+        subset=[col['field'].name for col in _columns_config if col.get('primary_key', False)]
+    ).replace({
         float('nan'): None
     }).to_dict(
         orient='records',
