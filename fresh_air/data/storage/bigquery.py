@@ -35,7 +35,41 @@ BIGQUERY_TYPE = {
     'timestamp': bigquery.SqlTypeNames.TIMESTAMP,
     'datetime': bigquery.SqlTypeNames.DATETIME,
     'date': bigquery.SqlTypeNames.DATE,
+    'record': bigquery.SqlTypeNames.RECORD,
 }
+
+
+def _convert_schema_to_bigquery(schema: List[SchemaField], add_meta: bool = True) -> List[bigquery.SchemaField]:
+    """
+    Convert resource schema representation to BigQuery schema representation.
+
+    Args:
+        schema: Internal schema representation.
+        add_meta: Whether to add metadata fields to the schema.
+
+    Returns:
+        BigQuery schema representation.
+    """
+    bq_schema = []
+    for field in chain(schema, meta_fields if add_meta else []):
+        if isinstance(field.field_type, type):
+            field_type = BIGQUERY_TYPE.get(field.field_type.__name__, 'STRING')
+        elif isinstance(field.field_type, str):
+            field_type = BIGQUERY_TYPE.get(field.field_type.lower(), 'STRING')
+        else:
+            raise TypeError(f'Unknown type ({type(field.field_type)}) for `field_type` of {field}')
+
+        bq_schema.append(
+            bigquery.SchemaField(
+                name=field.name,
+                field_type=field_type,
+                description=field.description,
+                mode=field.mode,
+                fields=_convert_schema_to_bigquery(field.fields, add_meta=False) if field.fields else (),
+            )
+        )
+
+    return bq_schema
 
 
 class BigQueryTable(Resource):
@@ -60,6 +94,7 @@ class BigQueryTable(Resource):
                 with '.' separating leves of the hierarchy.
             schema: Table schema as a list of SchemaField objects. Field type should be one of the supported
                 BigQuery types.
+            clustering_fields: Fields to cluster by.
             project_id: BigQuery project ID to save data to.
             partition_field: Field to use for table partitioning (must be of time TIMESTAMP, DATE or DATETIME).
             partition_scale: Time scale to use when partitioning a table (hour, day, month or year).
@@ -131,7 +166,13 @@ class BigQueryTable(Resource):
         bq_client = get_client()
         return [dict(row) for row in bq_client.list_rows(self._table)]
 
-    def run_query(self, query: str, wait_for_result: bool = False, **kwargs) -> bigquery.QueryJob:
+    def run_query(
+            self,
+            query: str,
+            wait_for_result: bool = False,
+            job_config: Optional[bigquery.QueryJobConfig] = None,
+            **kwargs,
+    ) -> bigquery.QueryJob:
         """
         Run query against this table.
 
@@ -139,6 +180,7 @@ class BigQueryTable(Resource):
             query: Query to run. Might contain "{table}" format placeholder, which will be filled with the fully
              qualified table name.
             wait_for_result: Whether to wait for the job to finish.
+            job_config: Optional query job configuration.
             **kwargs: Any additional parameters will be passed to the `query.format` method.
 
         Returns:
@@ -148,35 +190,19 @@ class BigQueryTable(Resource):
         self._ensure_table_exists()
 
         job = bq_client.query(
-            query.format(table=self.full_table_name, **kwargs)
+            query.format(table=self.full_table_name, **kwargs),
+            job_config=job_config,
         )
 
         if wait_for_result:
-            while not job.done():
-                time.sleep(0.5)
+            job.result()
 
         return job
 
     @property
     @cache
     def _table(self) -> bigquery.Table:
-        schema = []
-        for field in chain(self.schema, meta_fields):
-            if isinstance(field.field_type, type):
-                field_type = BIGQUERY_TYPE.get(field.field_type.__name__, 'STRING')
-            elif isinstance(field.field_type, str):
-                field_type = BIGQUERY_TYPE.get(field.field_type, 'STRING')
-            else:
-                raise TypeError(f'Unknown type ({type(field.field_type)}) for `field_type` of {field}')
-
-            schema.append(
-                bigquery.SchemaField(
-                    name=field.name,
-                    field_type=field_type,
-                    description=field.description,
-                    mode=field.mode,
-                )
-            )
+        schema = _convert_schema_to_bigquery(self.schema)
 
         table = bigquery.Table(
             self.full_table_name,  # noqa

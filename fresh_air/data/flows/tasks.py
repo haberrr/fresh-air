@@ -122,6 +122,7 @@ def bigquery_merge(
         target: BigQueryTable,
         merge_keys: List[str],
         condition_keys: List[str] = None,
+        job_config: Optional[bigquery.QueryJobConfig] = None,
         wait_for_result: bool = True,
 ) -> bigquery.QueryJob:
     """
@@ -135,6 +136,7 @@ def bigquery_merge(
          will be joined together.
         condition_keys: List of columns to check when updating the row data. If values of these columns in source and
          target tables do not coincide, the row will be updated; otherwise, it will be left unchanged.
+        job_config: Job config to use when running a query.
         wait_for_result: Whether to wait for the query job to finish before returning.
 
     Returns:
@@ -169,7 +171,7 @@ def bigquery_merge(
     WHEN NOT MATCHED THEN {not_matched_clause}
     '''
 
-    return target.run_query(query, wait_for_result)
+    return target.run_query(query, job_config=job_config, wait_for_result=wait_for_result)
 
 
 def _make_source_definition(source: Union[BigQueryTable, str]) -> str:

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, Tuple, List, Union
+from typing import Optional, Dict, Any, Tuple, List, Union, Sequence
 from dataclasses import dataclass
 
 
@@ -10,6 +10,7 @@ class SchemaField:
     default: Optional[Any] = None
     description: Optional[str] = None
     mode: Optional[str] = None
+    fields: Optional[Sequence['SchemaField']] = None
 
 
 class Resource(ABC):
